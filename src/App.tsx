@@ -7,7 +7,6 @@ import Home from "./pages/Home";
 import Profile from "./pages/Profile";
 import AIRoadmap from "./pages/AIRoadmap";
 import Chat from "./pages/Chat";
-import Platforms from "./pages/Platforms";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -23,7 +22,6 @@ const App = () => (
           <Route path="/profile" element={<Profile />} />
           <Route path="/ai-roadmap" element={<AIRoadmap />} />
           <Route path="/chat" element={<Chat />} />
-          <Route path="/platforms" element={<Platforms />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>

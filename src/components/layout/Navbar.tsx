@@ -1,7 +1,7 @@
 import { Link, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Briefcase, User, Brain, MessageSquare, Globe } from "lucide-react";
+import { Briefcase, User, Brain, MessageSquare } from "lucide-react";
 
 export const Navbar = () => {
   const location = useLocation();
@@ -13,7 +13,6 @@ export const Navbar = () => {
     { path: "/profile", label: "Profile", icon: User },
     { path: "/ai-roadmap", label: "AI Roadmap", icon: Brain },
     { path: "/chat", label: "Chat", icon: MessageSquare },
-    { path: "/platforms", label: "Platforms", icon: Globe },
   ];
 
   return (
