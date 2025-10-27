@@ -1,12 +1,24 @@
 import { Link, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Briefcase, User, Brain, MessageSquare } from "lucide-react";
+import { Briefcase, User, Brain, MessageSquare, LogOut } from "lucide-react";
+import { useAuth } from "@/contexts/AuthContext";
+import { toast } from "sonner";
 
 export const Navbar = () => {
   const location = useLocation();
+  const { user, profile, signOut } = useAuth();
   
   const isActive = (path: string) => location.pathname === path;
+  
+  const handleSignOut = async () => {
+    try {
+      await signOut();
+      toast.success("Signed out successfully");
+    } catch (error) {
+      toast.error("Error signing out");
+    }
+  };
   
   const navLinks = [
     { path: "/", label: "Home", icon: Briefcase },
@@ -47,16 +59,34 @@ export const Navbar = () => {
           </div>
 
           <div className="flex items-center gap-3">
-            <div className="hidden sm:flex items-center gap-2 rounded-full border border-border bg-muted/50 px-3 py-1.5">
-              <div className="flex flex-col text-right">
-                <span className="text-sm font-medium">John Doe</span>
-                <span className="text-xs text-muted-foreground">Freelancer</span>
+            {user ? (
+              <div className="hidden sm:flex items-center gap-2">
+                <div className="flex items-center gap-2 rounded-full border border-border bg-muted/50 px-3 py-1.5">
+                  <div className="flex flex-col text-right">
+                    <span className="text-sm font-medium">{profile?.full_name || user.email}</span>
+                    <span className="text-xs text-muted-foreground capitalize">{profile?.role || "User"}</span>
+                  </div>
+                  <Avatar className="h-8 w-8">
+                    <AvatarImage src="" alt="User" />
+                    <AvatarFallback className="bg-gradient-primary text-white">
+                      {profile?.full_name ? profile.full_name.charAt(0) : "U"}
+                    </AvatarFallback>
+                  </Avatar>
+                </div>
+                <Button variant="ghost" size="icon" onClick={handleSignOut} title="Sign out">
+                  <LogOut className="h-4 w-4" />
+                </Button>
               </div>
-              <Avatar className="h-8 w-8">
-                <AvatarImage src="" alt="User" />
-                <AvatarFallback className="bg-gradient-primary text-white">JD</AvatarFallback>
-              </Avatar>
-            </div>
+            ) : (
+              <div className="flex items-center gap-2">
+                <Link to="/login">
+                  <Button variant="ghost" size="sm">Sign in</Button>
+                </Link>
+                <Link to="/register">
+                  <Button variant="gradient" size="sm">Register</Button>
+                </Link>
+              </div>
+            )}
           </div>
         </div>
       </div>

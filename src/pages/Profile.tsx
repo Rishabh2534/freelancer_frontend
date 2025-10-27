@@ -1,3 +1,5 @@
+import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { Navbar } from "@/components/layout/Navbar";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -5,8 +7,40 @@ import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Star, DollarSign, Briefcase, Edit, MapPin, Mail, Calendar } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
+import { useAuth } from "@/contexts/AuthContext";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 
 const Profile = () => {
+  const navigate = useNavigate();
+  const { user, profile } = useAuth();
+  const [profileData, setProfileData] = useState<any>(null);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchProfileData = async () => {
+      if (!user) return;
+      
+      try {
+        const { data, error } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('id', user.id)
+          .single();
+          
+        if (error) throw error;
+        setProfileData(data);
+      } catch (error: any) {
+        console.error('Error fetching profile:', error);
+        toast.error('Failed to load profile data');
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    
+    fetchProfileData();
+  }, [user]);
+  
   const skills = [
     { name: "React", level: 95 },
     { name: "TypeScript", level: 90 },
@@ -59,26 +93,28 @@ const Profile = () => {
             <CardHeader className="text-center">
               <div className="flex justify-center mb-4">
                 <Avatar className="h-32 w-32 border-4 border-primary/20">
-                  <AvatarImage src="" alt="John Doe" />
-                  <AvatarFallback className="text-4xl bg-gradient-primary text-white">JD</AvatarFallback>
+                  <AvatarImage src={profileData?.avatar_url || ""} alt={profileData?.full_name || "User"} />
+                  <AvatarFallback className="text-4xl bg-gradient-primary text-white">
+                    {profileData?.full_name ? profileData.full_name.charAt(0) : user?.email?.charAt(0) || "U"}
+                  </AvatarFallback>
                 </Avatar>
               </div>
-              <CardTitle className="text-2xl">John Doe</CardTitle>
-              <Badge variant="default" className="mt-2">Freelancer</Badge>
+              <CardTitle className="text-2xl">{profileData?.full_name || user?.email?.split('@')[0] || "User"}</CardTitle>
+              <Badge variant="default" className="mt-2 capitalize">{profileData?.role || profile?.role || "User"}</Badge>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="space-y-3 text-sm">
                 <div className="flex items-center gap-2 text-muted-foreground">
                   <MapPin className="h-4 w-4" />
-                  <span>San Francisco, CA</span>
+                  <span>{profileData?.location || "Location not specified"}</span>
                 </div>
                 <div className="flex items-center gap-2 text-muted-foreground">
                   <Mail className="h-4 w-4" />
-                  <span>john.doe@email.com</span>
+                  <span>{user?.email || "Email not available"}</span>
                 </div>
                 <div className="flex items-center gap-2 text-muted-foreground">
                   <Calendar className="h-4 w-4" />
-                  <span>Member since Jan 2023</span>
+                  <span>Member since {new Date(user?.created_at || Date.now()).toLocaleDateString('en-US', { year: 'numeric', month: 'short' })}</span>
                 </div>
               </div>
 
@@ -97,7 +133,11 @@ const Profile = () => {
                 })}
               </div>
 
-              <Button variant="gradient" className="w-full gap-2">
+              <Button 
+                variant="gradient" 
+                className="w-full gap-2" 
+                onClick={() => navigate("/edit-profile")}
+              >
                 <Edit className="h-4 w-4" />
                 Edit Profile
               </Button>
@@ -112,9 +152,7 @@ const Profile = () => {
               </CardHeader>
               <CardContent>
                 <p className="text-muted-foreground leading-relaxed">
-                  Full-stack developer with 5+ years of experience building modern web applications. 
-                  Passionate about creating elegant solutions to complex problems. Specialized in React, 
-                  Node.js, and cloud technologies. Love working on innovative projects that make a real impact.
+                  {profileData?.bio || "No bio available. Edit your profile to add a bio."}
                 </p>
               </CardContent>
             </Card>
