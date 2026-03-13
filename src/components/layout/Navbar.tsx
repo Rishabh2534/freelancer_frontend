@@ -63,13 +63,13 @@ export const Navbar = () => {
               <div className="hidden sm:flex items-center gap-2">
                 <div className="flex items-center gap-2 rounded-full border border-border bg-muted/50 px-3 py-1.5">
                   <div className="flex flex-col text-right">
-                    <span className="text-sm font-medium">{profile?.full_name || user.email}</span>
-                    <span className="text-xs text-muted-foreground capitalize">{profile?.role || "User"}</span>
+                    <span className="text-sm font-medium">{profile?.fullName || profile?.full_name || user.email}</span>
+                    <span className="text-xs text-muted-foreground capitalize">{user.role || "User"}</span>
                   </div>
                   <Avatar className="h-8 w-8">
-                    <AvatarImage src="" alt="User" />
+                    <AvatarImage src={profile?.avatarUrl || profile?.avatar_url || ""} alt="User" />
                     <AvatarFallback className="bg-gradient-primary text-white">
-                      {profile?.full_name ? profile.full_name.charAt(0) : "U"}
+                      {(profile?.fullName || profile?.full_name) ? (profile.fullName || profile.full_name).charAt(0) : "U"}
                     </AvatarFallback>
                   </Avatar>
                 </div>

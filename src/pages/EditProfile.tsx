@@ -8,7 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useAuth } from "@/contexts/AuthContext";
-import { supabase } from "@/integrations/supabase/client";
+import { api } from "@/services/api";
 import { toast } from "sonner";
 
 const EditProfile = () => {
@@ -28,20 +28,14 @@ const EditProfile = () => {
       if (!user) return;
       
       try {
-        const { data, error } = await supabase
-          .from('profiles')
-          .select('*')
-          .eq('id', user.id)
-          .single();
-          
-        if (error) throw error;
+        const { profile } = await api.getProfile(user.id);
         
         setFormData({
-          full_name: data.full_name || "",
-          role: data.role || "",
-          location: data.location || "",
-          bio: data.bio || "",
-          website: data.website || "",
+          full_name: profile.fullName || profile.full_name || "",
+          role: user.role || "",
+          location: profile.location || "",
+          bio: profile.bio || "",
+          website: profile.website || "",
         });
       } catch (error: any) {
         console.error('Error fetching profile:', error);
@@ -72,12 +66,12 @@ const EditProfile = () => {
     setIsLoading(true);
     
     try {
-      const { error } = await supabase
-        .from('profiles')
-        .update(formData)
-        .eq('id', user.id);
-        
-      if (error) throw error;
+      await api.updateProfile(user.id, {
+        fullName: formData.full_name,
+        location: formData.location,
+        bio: formData.bio,
+        website: formData.website,
+      });
       
       toast.success("Profile updated successfully");
       navigate("/profile");

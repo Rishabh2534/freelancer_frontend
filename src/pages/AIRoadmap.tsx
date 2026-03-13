@@ -8,6 +8,7 @@ import { Progress } from "@/components/ui/progress";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Brain, Sparkles, ChevronDown, CheckCircle2, Circle } from "lucide-react";
 import { toast } from "sonner";
+import { api } from "@/services/api";
 
 interface RoadmapModule {
   id: string;
@@ -23,7 +24,7 @@ const AIRoadmap = () => {
   const [roadmap, setRoadmap] = useState<RoadmapModule[] | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
 
-  const generateRoadmap = () => {
+  const generateRoadmap = async () => {
     if (!skill.trim()) {
       toast.error("Please enter a skill to generate roadmap");
       return;
@@ -31,55 +32,30 @@ const AIRoadmap = () => {
 
     setIsGenerating(true);
     
-    // Simulate AI generation
-    setTimeout(() => {
-      setRoadmap([
-        {
-          id: "1",
-          title: "Fundamentals",
-          description: "Master the core concepts and basics",
-          topics: ["Introduction to " + skill, "Basic Syntax", "Core Principles", "Best Practices"],
-          completed: true,
-          progress: 100,
-        },
-        {
-          id: "2",
-          title: "Intermediate Concepts",
-          description: "Build on fundamentals with advanced topics",
-          topics: ["Advanced Patterns", "State Management", "Performance Optimization", "Testing"],
-          completed: false,
-          progress: 60,
-        },
-        {
-          id: "3",
-          title: "Advanced Techniques",
-          description: "Master expert-level concepts",
-          topics: ["Architecture Design", "Scalability", "Security", "Production Deployment"],
-          completed: false,
-          progress: 30,
-        },
-        {
-          id: "4",
-          title: "Career Paths",
-          description: "Explore career opportunities",
-          topics: ["Senior Developer", "Technical Lead", "Solution Architect", "Consultant"],
-          completed: false,
-          progress: 0,
-        },
-      ]);
-      setIsGenerating(false);
+    try {
+      const { roadmap: generatedRoadmap } = await api.generateRoadmap(skill);
+      setRoadmap(generatedRoadmap);
       toast.success("Roadmap generated successfully!");
-    }, 2000);
+    } catch (error: any) {
+      toast.error(error.message || "Failed to generate roadmap");
+    } finally {
+      setIsGenerating(false);
+    }
   };
 
-  const toggleModuleComplete = (moduleId: string) => {
-    setRoadmap(prev =>
-      prev?.map(module =>
-        module.id === moduleId
-          ? { ...module, completed: !module.completed, progress: module.completed ? 0 : 100 }
-          : module
-      ) || null
+  const toggleModuleComplete = async (moduleId: string) => {
+    if (!roadmap) return;
+    
+    const updatedRoadmap = roadmap.map(module =>
+      module.id === moduleId
+        ? { ...module, completed: !module.completed, progress: module.completed ? 0 : 100 }
+        : module
     );
+    
+    setRoadmap(updatedRoadmap);
+    
+    // Save to backend (you'd need to track roadmap ID)
+    // For now, just update locally
   };
 
   const overallProgress = roadmap

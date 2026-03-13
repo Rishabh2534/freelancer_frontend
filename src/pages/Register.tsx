@@ -7,10 +7,12 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
-import { supabase } from "@/integrations/supabase/client";
+import { api } from "@/services/api";
+import { useAuth } from "@/contexts/AuthContext";
 
 const Register = () => {
   const navigate = useNavigate();
+  const { refreshUser } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
   const [formData, setFormData] = useState({
     name: "",
@@ -46,23 +48,15 @@ const Register = () => {
     setIsLoading(true);
     
     try {
-      // Register with Supabase
-      const { data, error } = await supabase.auth.signUp({
+      await api.register({
         email: formData.email,
         password: formData.password,
-        options: {
-          data: {
-            full_name: formData.name,
-            role: formData.role,
-          },
-          emailRedirectTo: window.location.origin + '/login',
-        },
+        name: formData.name,
+        role: formData.role,
       });
-      
-      if (error) throw error;
-      
-      toast.success("Registration successful! Please check your email to verify your account.");
-      navigate("/login");
+      await refreshUser();
+      toast.success("Registration successful! You're logged in.");
+      navigate("/profile");
     } catch (error: any) {
       toast.error(error.message || "An error occurred during registration");
     } finally {

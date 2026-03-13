@@ -13,13 +13,23 @@ import { CalendarIcon, Plus, X } from "lucide-react";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
+import { api } from "@/services/api";
 
-export const ProjectPostForm = () => {
+interface ProjectPostFormProps {
+  onSuccess?: () => void;
+}
+
+export const ProjectPostForm = ({ onSuccess }: ProjectPostFormProps) => {
   const [date, setDate] = useState<Date>();
   const [techStack, setTechStack] = useState<{ name: string; proficiency: number }[]>([]);
   const [currentTech, setCurrentTech] = useState("");
   const [currentProficiency, setCurrentProficiency] = useState(50);
   const [workTypes, setWorkTypes] = useState<string[]>([]);
+  const [title, setTitle] = useState("");
+  const [description, setDescription] = useState("");
+  const [duration, setDuration] = useState("");
+  const [budget, setBudget] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleAddTech = () => {
     if (currentTech.trim()) {
@@ -39,9 +49,41 @@ export const ProjectPostForm = () => {
     );
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    toast.success("Project posted successfully!");
+    
+    if (!title || !description || !date || !duration || workTypes.length === 0) {
+      toast.error("Please fill in all required fields");
+      return;
+    }
+
+    setIsSubmitting(true);
+    
+    try {
+      await api.createProject({
+        title,
+        description,
+        deadline: date.toISOString(),
+        duration: duration,
+        workType: workTypes.map(wt => wt.toLowerCase()),
+        budget: budget || undefined,
+        techStack,
+      });
+      
+      toast.success("Project posted successfully!");
+      setTitle("");
+      setDescription("");
+      setDate(undefined);
+      setDuration("");
+      setWorkTypes([]);
+      setBudget("");
+      setTechStack([]);
+      onSuccess?.();
+    } catch (error: any) {
+      toast.error(error.message || "Failed to post project");
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -54,7 +96,13 @@ export const ProjectPostForm = () => {
         <form onSubmit={handleSubmit} className="space-y-6">
           <div className="space-y-2">
             <Label htmlFor="title">Project Title</Label>
-            <Input id="title" placeholder="e.g., Build a React Dashboard" required />
+            <Input 
+              id="title" 
+              placeholder="e.g., Build a React Dashboard" 
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              required 
+            />
           </div>
 
           <div className="space-y-2">
@@ -63,6 +111,8 @@ export const ProjectPostForm = () => {
               id="description"
               placeholder="Describe your project requirements in detail..."
               rows={4}
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
               required
             />
           </div>
@@ -97,7 +147,7 @@ export const ProjectPostForm = () => {
 
             <div className="space-y-2">
               <Label htmlFor="duration">Expected Duration</Label>
-              <Select>
+              <Select value={duration} onValueChange={setDuration}>
                 <SelectTrigger id="duration">
                   <SelectValue placeholder="Select duration" />
                 </SelectTrigger>
@@ -166,8 +216,18 @@ export const ProjectPostForm = () => {
             </div>
           </div>
 
-          <Button type="submit" className="w-full" variant="gradient" size="lg">
-            Post Project
+          <div className="space-y-2">
+            <Label htmlFor="budget">Budget (Optional)</Label>
+            <Input 
+              id="budget" 
+              placeholder="e.g., $3,000-$5,000"
+              value={budget}
+              onChange={(e) => setBudget(e.target.value)}
+            />
+          </div>
+
+          <Button type="submit" className="w-full" variant="gradient" size="lg" disabled={isSubmitting}>
+            {isSubmitting ? "Posting..." : "Post Project"}
           </Button>
         </form>
       </CardContent>

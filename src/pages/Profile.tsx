@@ -8,7 +8,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Star, DollarSign, Briefcase, Edit, MapPin, Mail, Calendar } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
 import { useAuth } from "@/contexts/AuthContext";
-import { supabase } from "@/integrations/supabase/client";
+import { api } from "@/services/api";
 import { toast } from "sonner";
 
 const Profile = () => {
@@ -22,14 +22,8 @@ const Profile = () => {
       if (!user) return;
       
       try {
-        const { data, error } = await supabase
-          .from('profiles')
-          .select('*')
-          .eq('id', user.id)
-          .single();
-          
-        if (error) throw error;
-        setProfileData(data);
+        const { profile } = await api.getProfile(user.id);
+        setProfileData(profile);
       } catch (error: any) {
         console.error('Error fetching profile:', error);
         toast.error('Failed to load profile data');
@@ -41,15 +35,15 @@ const Profile = () => {
     fetchProfileData();
   }, [user]);
   
-  const skills = [
-    { name: "React", level: 95 },
-    { name: "TypeScript", level: 90 },
-    { name: "Node.js", level: 85 },
-    { name: "Python", level: 80 },
-    { name: "UI/UX", level: 75 },
+  const skills = profileData?.skills || [
+    { name: "React", proficiency: 95 },
+    { name: "TypeScript", proficiency: 90 },
+    { name: "Node.js", proficiency: 85 },
+    { name: "Python", proficiency: 80 },
+    { name: "UI/UX", proficiency: 75 },
   ];
 
-  const reviews = [
+  const reviews = profileData?.receivedReviews || [
     {
       id: 1,
       client: "Sarah Johnson",
@@ -77,9 +71,9 @@ const Profile = () => {
   ];
 
   const stats = [
-    { label: "Total Earnings", value: "$45,230", icon: DollarSign, color: "text-success" },
-    { label: "Projects Completed", value: "37", icon: Briefcase, color: "text-primary" },
-    { label: "Average Rating", value: "4.9", icon: Star, color: "text-accent" },
+    { label: "Total Earnings", value: profileData?.stats?.totalEarnings || "$0", icon: DollarSign, color: "text-success" },
+    { label: "Projects Completed", value: String(profileData?.stats?.projectsCompleted || profileData?._count?.projects || 0), icon: Briefcase, color: "text-primary" },
+    { label: "Average Rating", value: profileData?.stats?.averageRating || "0.0", icon: Star, color: "text-accent" },
   ];
 
   return (
@@ -93,14 +87,14 @@ const Profile = () => {
             <CardHeader className="text-center">
               <div className="flex justify-center mb-4">
                 <Avatar className="h-32 w-32 border-4 border-primary/20">
-                  <AvatarImage src={profileData?.avatar_url || ""} alt={profileData?.full_name || "User"} />
+                  <AvatarImage src={profileData?.avatarUrl || profileData?.avatar_url || ""} alt={profileData?.fullName || profileData?.full_name || "User"} />
                   <AvatarFallback className="text-4xl bg-gradient-primary text-white">
-                    {profileData?.full_name ? profileData.full_name.charAt(0) : user?.email?.charAt(0) || "U"}
+                    {(profileData?.fullName || profileData?.full_name) ? (profileData.fullName || profileData.full_name).charAt(0) : user?.email?.charAt(0) || "U"}
                   </AvatarFallback>
                 </Avatar>
               </div>
-              <CardTitle className="text-2xl">{profileData?.full_name || user?.email?.split('@')[0] || "User"}</CardTitle>
-              <Badge variant="default" className="mt-2 capitalize">{profileData?.role || profile?.role || "User"}</Badge>
+              <CardTitle className="text-2xl">{profileData?.fullName || profileData?.full_name || user?.email?.split('@')[0] || "User"}</CardTitle>
+              <Badge variant="default" className="mt-2 capitalize">{user?.role || "User"}</Badge>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="space-y-3 text-sm">
@@ -162,13 +156,13 @@ const Profile = () => {
                 <CardTitle>Skills & Expertise</CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
-                {skills.map((skill, idx) => (
+                {skills.map((skill: any, idx: number) => (
                   <div key={idx} className="space-y-2">
                     <div className="flex items-center justify-between">
                       <span className="font-medium">{skill.name}</span>
-                      <span className="text-sm text-muted-foreground">{skill.level}%</span>
+                      <span className="text-sm text-muted-foreground">{skill.proficiency || skill.level}%</span>
                     </div>
-                    <Progress value={skill.level} className="h-2" />
+                    <Progress value={skill.proficiency || skill.level} className="h-2" />
                   </div>
                 ))}
               </CardContent>
@@ -179,18 +173,20 @@ const Profile = () => {
                 <CardTitle>Client Reviews</CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
-                {reviews.map((review) => (
+                {reviews.map((review: any) => (
                   <div key={review.id} className="border-b last:border-0 pb-4 last:pb-0">
                     <div className="flex items-start justify-between mb-2">
                       <div>
-                        <p className="font-medium">{review.client}</p>
-                        <p className="text-xs text-muted-foreground">{review.project}</p>
+                        <p className="font-medium">{review.author?.profile?.fullName || review.author?.email || review.client}</p>
+                        <p className="text-xs text-muted-foreground">{review.projectId || review.project}</p>
                       </div>
                       <div className="flex items-center gap-1">
                         {Array.from({ length: review.rating }).map((_, i) => (
                           <Star key={i} className="h-4 w-4 fill-accent text-accent" />
                         ))}
-                        <span className="text-sm text-muted-foreground ml-1">{review.date}</span>
+                        <span className="text-sm text-muted-foreground ml-1">
+                          {review.date || new Date(review.createdAt).toLocaleDateString('en-US', { year: 'numeric', month: 'short' })}
+                        </span>
                       </div>
                     </div>
                     <p className="text-sm text-muted-foreground">{review.comment}</p>

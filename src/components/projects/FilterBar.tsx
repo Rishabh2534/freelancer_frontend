@@ -1,14 +1,34 @@
+import { useState } from "react";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Search, SlidersHorizontal } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
-interface FilterBarProps {
-  onFilterChange?: (filters: any) => void;
+export interface ProjectFilters {
+  search?: string;
+  duration?: string;
+  workType?: string;
+  techStack?: string;
 }
 
-export const FilterBar = ({ onFilterChange }: FilterBarProps) => {
+interface FilterBarProps {
+  filters?: ProjectFilters;
+  onFilterChange?: (filters: ProjectFilters) => void;
+}
+
+export const FilterBar = ({ filters = {}, onFilterChange }: FilterBarProps) => {
+  const [searchInput, setSearchInput] = useState(filters.search ?? "");
+
+  const updateFilter = (key: keyof ProjectFilters, value: string | undefined) => {
+    const next = { ...filters, [key]: value || undefined };
+    onFilterChange?.(next);
+  };
+
+  const handleSearch = () => {
+    updateFilter("search", searchInput.trim() || undefined);
+  };
+
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap gap-3">
@@ -17,10 +37,16 @@ export const FilterBar = ({ onFilterChange }: FilterBarProps) => {
           <Input
             placeholder="Search projects..."
             className="pl-9"
+            value={searchInput}
+            onChange={(e) => setSearchInput(e.target.value)}
+            onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), handleSearch())}
           />
         </div>
+        <Button type="button" variant="secondary" size="sm" onClick={handleSearch}>
+          Search
+        </Button>
 
-        <Select>
+        <Select value={filters.duration ?? "all"} onValueChange={(v) => updateFilter("duration", v)}>
           <SelectTrigger className="w-[180px]">
             <SelectValue placeholder="Duration" />
           </SelectTrigger>
@@ -32,7 +58,7 @@ export const FilterBar = ({ onFilterChange }: FilterBarProps) => {
           </SelectContent>
         </Select>
 
-        <Select>
+        <Select value={filters.workType ?? "all"} onValueChange={(v) => updateFilter("workType", v)}>
           <SelectTrigger className="w-[180px]">
             <SelectValue placeholder="Work Type" />
           </SelectTrigger>
@@ -43,17 +69,17 @@ export const FilterBar = ({ onFilterChange }: FilterBarProps) => {
             <SelectItem value="hybrid">Hybrid</SelectItem>
           </SelectContent>
         </Select>
-
-        <Button variant="outline" className="gap-2">
-          <SlidersHorizontal className="h-4 w-4" />
-          More Filters
-        </Button>
       </div>
 
       <div className="flex flex-wrap gap-2">
         <span className="text-sm text-muted-foreground">Popular:</span>
         {["React", "Node.js", "Python", "UI/UX", "Full-stack"].map((skill) => (
-          <Badge key={skill} variant="outline" className="cursor-pointer hover:bg-primary/10">
+          <Badge
+            key={skill}
+            variant={filters.techStack === skill ? "default" : "outline"}
+            className="cursor-pointer hover:bg-primary/10"
+            onClick={() => updateFilter("techStack", filters.techStack === skill ? undefined : skill)}
+          >
             {skill}
           </Badge>
         ))}

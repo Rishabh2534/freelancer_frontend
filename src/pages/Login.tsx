@@ -6,10 +6,12 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
-import { supabase } from "@/integrations/supabase/client";
+import { api } from "@/services/api";
+import { useAuth } from "@/contexts/AuthContext";
 
 const Login = () => {
   const navigate = useNavigate();
+  const { refreshUser } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
   const [formData, setFormData] = useState({
     email: "",
@@ -33,14 +35,11 @@ const Login = () => {
     setIsLoading(true);
     
     try {
-      // Login with Supabase
-      const { data, error } = await supabase.auth.signInWithPassword({
+      await api.login({
         email: formData.email,
         password: formData.password,
       });
-      
-      if (error) throw error;
-      
+      await refreshUser();
       toast.success("Login successful!");
       navigate("/profile");
     } catch (error: any) {
@@ -90,9 +89,13 @@ const Login = () => {
               </div>
               
               <div className="flex items-center justify-end">
-                <Link to="/forgot-password" className="text-sm text-primary hover:underline">
+                <button
+                  type="button"
+                  onClick={() => toast.info("Password reset coming soon. Contact support for now.")}
+                  className="text-sm text-primary hover:underline"
+                >
                   Forgot password?
-                </Link>
+                </button>
               </div>
               
               <Button type="submit" className="w-full" variant="gradient" disabled={isLoading}>

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Navbar } from "@/components/layout/Navbar";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -7,6 +7,8 @@ import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { MessageSquare, Send, Hash, Users } from "lucide-react";
+import { api } from "@/services/api";
+import { toast } from "sonner";
 
 interface Message {
   id: string;
@@ -17,53 +19,82 @@ interface Message {
 }
 
 const Chat = () => {
-  const [selectedChannel, setSelectedChannel] = useState("react");
+  const [selectedChannel, setSelectedChannel] = useState<string | null>(null);
   const [messageInput, setMessageInput] = useState("");
-  const [messages, setMessages] = useState<Message[]>([
-    {
-      id: "1",
-      user: "Sarah J",
-      content: "Hey everyone! Just finished a great project using React and TypeScript. Anyone have experience with state management patterns?",
-      timestamp: "10:23 AM",
-      avatar: "SJ",
-    },
-    {
-      id: "2",
-      user: "Mike C",
-      content: "Congrats! I'd recommend checking out Zustand for lightweight state management. It's been a game-changer for me.",
-      timestamp: "10:25 AM",
-      avatar: "MC",
-    },
-    {
-      id: "3",
-      user: "Emma W",
-      content: "I second Zustand! Also, Context API works great for smaller apps. What's the scale of your project?",
-      timestamp: "10:27 AM",
-      avatar: "EW",
-    },
-  ]);
+  const [messages, setMessages] = useState<Message[]>([]);
+  const [channels, setChannels] = useState<{ id: string; name: string; members: number }[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
 
-  const channels = [
-    { id: "react", name: "React", members: 1234 },
-    { id: "nodejs", name: "Node.js", members: 892 },
-    { id: "python", name: "Python", members: 1567 },
-    { id: "design", name: "UI/UX Design", members: 743 },
-    { id: "general", name: "General", members: 2341 },
-  ];
+  useEffect(() => {
+    const fetchChannels = async () => {
+      try {
+        const { channels: fetchedChannels } = await api.getChannels();
+        const transformedChannels = fetchedChannels.map((ch: any) => ({
+          id: ch.id,
+          name: ch.name,
+          members: ch.memberCount || 0,
+        }));
+        setChannels(transformedChannels);
+        if (transformedChannels.length > 0 && !selectedChannel) {
+          setSelectedChannel(transformedChannels[0].id);
+        }
+      } catch (error: any) {
+        console.error('Error fetching channels:', error);
+        toast.error('Failed to load channels');
+      } finally {
+        setIsLoading(false);
+      }
+    };
 
-  const handleSendMessage = () => {
-    if (messageInput.trim()) {
-      setMessages([
-        ...messages,
+    fetchChannels();
+  }, []);
+
+  useEffect(() => {
+    if (!selectedChannel) return;
+
+    const fetchMessages = async () => {
+      try {
+        const { messages: fetchedMessages } = await api.getChannelMessages(selectedChannel, 50);
+        const transformedMessages = fetchedMessages.map((msg: any) => ({
+          id: msg.id,
+          user: msg.user?.profile?.fullName || msg.user?.email?.split('@')[0] || "User",
+          content: msg.content,
+          timestamp: new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+          avatar: (msg.user?.profile?.fullName || msg.user?.email || "U").substring(0, 2).toUpperCase(),
+        }));
+        setMessages(transformedMessages);
+      } catch (error: any) {
+        console.error('Error fetching messages:', error);
+        toast.error('Failed to load messages');
+      }
+    };
+
+    fetchMessages();
+    // Poll for new messages every 5 seconds
+    const interval = setInterval(fetchMessages, 5000);
+    return () => clearInterval(interval);
+  }, [selectedChannel]);
+
+  const handleSendMessage = async () => {
+    if (!messageInput.trim() || !selectedChannel) return;
+    const content = messageInput.trim();
+    setMessageInput("");
+
+    try {
+      const { message: newMessage } = await api.sendMessage(selectedChannel, content);
+      setMessages((prev) => [
+        ...prev,
         {
-          id: Date.now().toString(),
+          id: newMessage.id,
           user: "You",
-          content: messageInput,
-          timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-          avatar: "JD",
+          content: newMessage.content,
+          timestamp: new Date(newMessage.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+          avatar: "YO",
         },
       ]);
-      setMessageInput("");
+    } catch (error: any) {
+      toast.error(error.message || "Failed to send message");
+      setMessageInput(content);
     }
   };
 
@@ -111,11 +142,11 @@ const Chat = () => {
                 <div className="flex items-center justify-between">
                   <CardTitle className="flex items-center gap-2">
                     <Hash className="h-5 w-5" />
-                    {channels.find((c) => c.id === selectedChannel)?.name}
+                    {channels.find((c) => c.id === selectedChannel)?.name || "Select a channel"}
                   </CardTitle>
                   <div className="flex items-center gap-2 text-sm text-muted-foreground">
                     <Users className="h-4 w-4" />
-                    <span>{channels.find((c) => c.id === selectedChannel)?.members} members</span>
+                    <span>{channels.find((c) => c.id === selectedChannel)?.members || 0} members</span>
                   </div>
                 </div>
               </CardHeader>
@@ -150,11 +181,12 @@ const Chat = () => {
               <CardContent className="p-4">
                 <div className="flex gap-2">
                   <Input
-                    placeholder={`Message #${channels.find((c) => c.id === selectedChannel)?.name}...`}
+                    placeholder={`Message #${channels.find((c) => c.id === selectedChannel)?.name || "channel"}...`}
                     value={messageInput}
                     onChange={(e) => setMessageInput(e.target.value)}
                     onKeyPress={(e) => e.key === "Enter" && handleSendMessage()}
                     className="flex-1"
+                    disabled={!selectedChannel}
                   />
                   <Button onClick={handleSendMessage} variant="gradient" size="icon">
                     <Send className="h-4 w-4" />
