@@ -1,4 +1,6 @@
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+// Backend routes are under /api (e.g. /api/auth/register, /api/projects). Ensure base URL ends with /api.
+const raw = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+const API_BASE_URL = raw.endsWith('/api') ? raw : raw.replace(/\/?$/, '/api');
 
 class ApiClient {
   private baseURL: string;
